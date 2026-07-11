@@ -1,21 +1,20 @@
 function LoadingSpinner() {
-
     return (
-
-        <div className="text-center mt-10">
-
-            <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-600 border-t-transparent mx-auto"></div>
-
-            <p className="mt-4">
-
-                Analyzing pronunciation...
-
-            </p>
-
+        <div className="flex flex-col items-center justify-center py-14 gap-5">
+            {/* Animated waveform bars */}
+            <div className="flex items-end gap-1.5">
+                <span className="wave-bar" />
+                <span className="wave-bar" />
+                <span className="wave-bar" />
+                <span className="wave-bar" />
+                <span className="wave-bar" />
+            </div>
+            <div className="text-center">
+                <p className="text-sm font-semibold text-indigo-600">Analyzing pronunciation…</p>
+                <p className="text-xs text-gray-400 mt-1">This may take a few seconds</p>
+            </div>
         </div>
-
     );
-
 }
 
 export default LoadingSpinner;
