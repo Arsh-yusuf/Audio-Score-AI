@@ -1,7 +1,8 @@
-from fastapi import APIRouter, UploadFile, File
+from fastapi import APIRouter, UploadFile, File, HTTPException
 from app.services.whisper_service import whisper_service
 from app.services.pronunciation_service import pronunciation_service
 from app.services.llm_service import llm_service
+import pycountry
 
 from app.utils.audio_utils import (
     validate_audio_type,
@@ -25,7 +26,7 @@ async def analyze_audio(
     file: UploadFile = File(...)
 ):
 
-    validate_audio_type(file.content_type)
+    validate_audio_type(file.content_type, file.filename)
 
     file_path = await save_upload_file(file)
 
@@ -35,7 +36,28 @@ async def analyze_audio(
 
         validate_audio_duration(duration)
 
-        result=whisper_service.transcribe(file_path)
+        # ── Language gate ──────────────────────────────────────────
+        # Detect language first without locking to English.
+        # Reject non-English audio with a clear error before doing
+        # the expensive full transcription pass.
+        detected_lang, lang_confidence = whisper_service.detect_language(file_path)
+
+        if detected_lang != "en":
+            # Try to get a human-readable language name for the error message
+            lang_obj = pycountry.languages.get(alpha_2=detected_lang)
+            lang_name = lang_obj.name if lang_obj else detected_lang.upper()
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"Only English audio is supported. "
+                    f"Detected language: {lang_name} "
+                    f"(confidence: {lang_confidence:.0%}). "
+                    f"Please upload an English recording."
+                )
+            )
+        # ───────────────────────────────────────────────────────────
+
+        result = whisper_service.transcribe(file_path)
         analysis = pronunciation_service.analyze(result["words"])
         
 

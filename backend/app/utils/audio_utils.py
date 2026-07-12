@@ -6,13 +6,27 @@ from app.core.constants import ALLOWED_AUDIO_TYPES
 from app.core.config import settings
 
 
-def validate_audio_type(content_type: str):
+def validate_audio_type(content_type: str, filename: str = ""):
+    import os
+    from app.core.constants import ALLOWED_EXTENSIONS
 
-    if content_type not in ALLOWED_AUDIO_TYPES:
-        raise HTTPException(
-            status_code=400,
-            detail="Unsupported audio format."
-        )
+    # Primary check: MIME type
+    if content_type in ALLOWED_AUDIO_TYPES:
+        return
+
+    # Fallback: check file extension (handles browsers that send wrong MIME types,
+    # e.g. Windows sends .mpeg files as "video/mpeg" or "application/octet-stream")
+    ext = os.path.splitext(filename)[1].lower()
+    if ext in ALLOWED_EXTENSIONS:
+        return
+
+    raise HTTPException(
+        status_code=400,
+        detail=f"Unsupported audio format. Got MIME type '{content_type}' "
+               f"with extension '{ext}'. "
+               f"Supported formats: MP3, MPEG, WAV, M4A, MP4, WebM, OGG, AAC, FLAC."
+    )
+
 
 
 def get_audio_duration(file_path: str) -> float:

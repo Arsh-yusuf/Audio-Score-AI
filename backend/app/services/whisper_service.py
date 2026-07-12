@@ -13,12 +13,25 @@ class WhisperService:
             compute_type="int8"
         )
 
+    def detect_language(self, audio_path: str) -> tuple[str, float]:
+        """
+        Runs a fast language-detection pass on the first 30 s of audio
+        without locking to any language.
+        Returns (language_code, confidence) e.g. ("en", 0.98)
+        """
+        _, info = self.model.transcribe(
+            audio_path,
+            beam_size=1,          # fastest possible pass
+            without_timestamps=True,
+        )
+        return info.language, info.language_probability
+
     def transcribe(self, audio_path: str):
 
         segments, info = self.model.transcribe(
             audio_path,
             beam_size=5,
-            language="en",
+            language="en",        # locked to English after detection confirms it
             word_timestamps=True
         )
 
