@@ -45,7 +45,7 @@ function UploadCard({ selectedFile, setSelectedFile, analyzeAudio }) {
                     </p>
                     <p className="text-xs text-gray-400">or click to browse</p>
                     <p className="text-xs text-gray-400 mt-1">
-                        Supports: MP3, WAV, M4A &nbsp;(Max size: 25MB)
+                        Supports: MP3, WAV, M4A and more ...&nbsp;(Max size: 25MB)
                     </p>
 
                     <input

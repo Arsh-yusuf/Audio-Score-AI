@@ -16,5 +16,15 @@ class Settings:
     TEMP_FOLDER = os.getenv("TEMP_FOLDER", "temp")
     UPLOAD_FOLDER = os.getenv("UPLOAD_FOLDER", "uploads")
 
+    # CORS Origins - Comma separated list of origins. Fallback to common dev/production origins.
+    ALLOWED_CORS_ORIGINS = [
+        origin.strip()
+        for origin in os.getenv(
+            "ALLOWED_CORS_ORIGINS",
+            "http://localhost:5173,http://127.0.0.1:5173"
+        ).split(",")
+        if origin.strip()
+    ]
+
 
 settings = Settings()

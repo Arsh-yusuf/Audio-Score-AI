@@ -89,6 +89,7 @@ async def analyze_audio(
             "language": result["language"],
             "overall_score": analysis["overall_score"],
             "average_confidence": analysis["average_confidence"],
+            "total_words": len(result["transcript"].split()),
             "transcript": result["transcript"],
             "mistakes": enhanced_mistakes,
             "feedback": llm_result.get("feedback", [])
