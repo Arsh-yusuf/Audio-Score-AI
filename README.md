@@ -187,6 +187,11 @@ Response
 
 ---
 
+## Deployment
+Backend is deployed on render and frontend on vercel. The free tier spins down after 15 minutes of inactivity, so you may need to wait a bit more for the first response after starting the application.
+
+Link : https://audio-score-ai.vercel.app
+
 ## Author
 
 Mohd Yusuf
