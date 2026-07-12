@@ -1,9 +1,9 @@
 fastapi
 uvicorn[standard]
 python-multipart
-faster-whisper
+groq
 python-dotenv
 aiofiles
 ffmpeg-python
 openai
-pycountry
+pycountry

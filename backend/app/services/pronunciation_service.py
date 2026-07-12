@@ -150,6 +150,10 @@ class PronunciationService:
             key=lambda x: x["confidence"]
         )
 
+        # Cap at top 5 worst words to keep UI focused and ensure
+        # every word gets custom LLM feedback (not generic fallback)
+        mistakes = mistakes[:5]
+
         return {
             "overall_score": score,
             "average_confidence": round(

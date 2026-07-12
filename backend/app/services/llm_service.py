@@ -48,6 +48,25 @@ class LLMService:
 
         return result
 
+    def _recover_partial_json(self, text: str, words: list[str]) -> dict:
+        """
+        Attempt to recover word entries from truncated JSON.
+        Even if the full JSON is invalid, individual word objects
+        that were completed can still be extracted.
+        """
+        import re
+        result = {}
+        for word in words:
+            # Search for the word's entry in the raw text
+            pattern = rf'"{re.escape(word)}"\s*:\s*\{{\s*"reason"\s*:\s*"([^"]+)"\s*,\s*"tip"\s*:\s*"([^"]+)"\s*\}}'
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                result[word] = {
+                    "reason": match.group(1),
+                    "tip": match.group(2)
+                }
+        return result
+
     def generate_feedback(
         self,
         overall_score: int,
@@ -63,6 +82,9 @@ class LLMService:
                 ]
             }
 
+        # Cap at 10 words to keep JSON response within token limits
+        words = words[:10]
+
         prompt = f"""
 You are an English pronunciation coach.
 
@@ -74,32 +96,27 @@ The following English words may have pronunciation issues:
 
 For EACH word generate:
 
-- reason
-- pronunciation tip
+- reason (1 short sentence, max 15 words)
+- pronunciation tip (1 short sentence, max 15 words)
 
-Also generate exactly 3 overall feedback points.
+Also generate exactly 3 short overall feedback points.
 
-IMPORTANT
-
-Return ONLY valid JSON.
-
-Do not use markdown.
+IMPORTANT:
+- Return ONLY valid JSON. No markdown.
+- Keep ALL values SHORT to avoid truncation.
+- Use the EXACT word as the key (lowercase, no quotes issues).
 
 Format exactly like this:
 
 {{
-  "WORD": {{
-      "reason": "...",
-      "tip": "..."
-  }},
-  "WORD2": {{
-      "reason": "...",
-      "tip": "..."
+  "word1": {{
+      "reason": "short reason",
+      "tip": "short tip"
   }},
   "feedback":[
-      "...",
-      "...",
-      "..."
+      "point 1",
+      "point 2",
+      "point 3"
   ]
 }}
 """
@@ -109,11 +126,11 @@ Format exactly like this:
             response = self.client.chat.completions.create(
                 model=settings.OPENROUTER_MODEL,
                 temperature=0.2,
-                max_tokens=700,
+                max_tokens=3500,
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are an English pronunciation coach."
+                        "content": "You are an English pronunciation coach. Always respond with valid, complete JSON. Keep all values concise."
                     },
                     {
                         "role": "user",
@@ -130,7 +147,18 @@ Format exactly like this:
 
             content = self._clean_json(content)
 
-            return json.loads(content)
+            try:
+                return json.loads(content)
+            except json.JSONDecodeError:
+                # Try to recover individual word entries from truncated JSON
+                print("JSON parse failed, attempting partial recovery...")
+                recovered = self._recover_partial_json(content, words)
+                if recovered:
+                    # Merge with fallback for missing words
+                    fallback = self._fallback(words)
+                    fallback.update(recovered)
+                    return fallback
+                raise
 
         except Exception as e:
 

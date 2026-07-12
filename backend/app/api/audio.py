@@ -42,7 +42,8 @@ async def analyze_audio(
         # the expensive full transcription pass.
         detected_lang, lang_confidence = whisper_service.detect_language(file_path)
 
-        if detected_lang != "en":
+        detected_lang_lower = detected_lang.lower()
+        if detected_lang_lower not in ["en", "english"]:
             # Try to get a human-readable language name for the error message
             lang_obj = pycountry.languages.get(alpha_2=detected_lang)
             lang_name = lang_obj.name if lang_obj else detected_lang.upper()
@@ -61,25 +62,35 @@ async def analyze_audio(
         analysis = pronunciation_service.analyze(result["words"])
         
 
+        # Send all mistake words to the LLM for feedback generation
         llm_result = llm_service.generate_feedback(
             overall_score=analysis["overall_score"],
             words=[
                 mistake["word"] 
-                for mistake in analysis["mistakes"][:5]
+                for mistake in analysis["mistakes"]
             ],
         )
+
+        import re
+        # Create a punctuation-cleaned, case-insensitive dictionary for LLM lookup
+        llm_feedback_clean = {}
+        if isinstance(llm_result, dict):
+            for k, v in llm_result.items():
+                if isinstance(v, dict):
+                    k_clean = re.sub(r"[^\w]", "", k.lower())
+                    llm_feedback_clean[k_clean] = v
 
         enhanced_mistakes = []
 
         for mistake in analysis["mistakes"]:
-
-            llm = llm_result.get(mistake["word"], {})
+            word_clean = re.sub(r"[^\w]", "", mistake["word"].lower())
+            llm = llm_feedback_clean.get(word_clean, {})
 
             enhanced_mistakes.append(
                 {
                     **mistake,
-                    "reason": llm.get("reason","Low pronunication confidence"),
-                    "tip": llm.get("tip","Practice this word slowly"),
+                    "reason": llm.get("reason", "Low pronunciation confidence"),
+                    "tip": llm.get("tip", "Practice this word slowly"),
                 }
             )
 
